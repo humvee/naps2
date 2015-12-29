@@ -40,7 +40,7 @@ namespace NAPS2.Console
 {
     using Console = System.Console;
 
-    public class AutomatedScanning : IScanReceiver
+    public class AutomatedScanning
     {
         private readonly ImageSaver imageSaver;
         private readonly IEmailer emailer;
@@ -110,7 +110,7 @@ namespace NAPS2.Console
 
             if (options.Number > 0)
             {
-                ExtendedScanSettings profile;
+                ScanProfile profile;
                 if (!GetProfile(out profile))
                 {
                     return;
@@ -388,7 +388,7 @@ namespace NAPS2.Console
             });
         }
 
-        private void PerformScan(ExtendedScanSettings profile)
+        private void PerformScan(ScanProfile profile)
         {
             OutputVerbose(ConsoleResources.BeginningScan);
 
@@ -403,12 +403,12 @@ namespace NAPS2.Console
                 }
                 OutputVerbose(ConsoleResources.StartingScan, i, options.Number);
                 pagesScanned = 0;
-                scanPerformer.PerformScan(profile, parentWindow, this);
+                scanPerformer.PerformScan(profile, new ScanParams(), parentWindow, ReceiveScannedImage);
                 OutputVerbose(ConsoleResources.PagesScanned, pagesScanned);
             }
         }
 
-        private bool GetProfile(out ExtendedScanSettings profile)
+        private bool GetProfile(out ScanProfile profile)
         {
             try
             {

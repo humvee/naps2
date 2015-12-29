@@ -46,6 +46,7 @@ namespace NAPS2.WinForms
             this.tStrip = new System.Windows.Forms.ToolStrip();
             this.tsScan = new System.Windows.Forms.ToolStripSplitButton();
             this.tsNewProfile = new System.Windows.Forms.ToolStripMenuItem();
+            this.tsBatchScan = new System.Windows.Forms.ToolStripMenuItem();
             this.tsProfiles = new System.Windows.Forms.ToolStripButton();
             this.tsOcr = new System.Windows.Forms.ToolStripButton();
             this.tsImport = new System.Windows.Forms.ToolStripButton();
@@ -85,6 +86,9 @@ namespace NAPS2.WinForms
             this.tsdReorder = new System.Windows.Forms.ToolStripDropDownButton();
             this.tsInterleave = new System.Windows.Forms.ToolStripMenuItem();
             this.tsDeinterleave = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
+            this.tsAltInterleave = new System.Windows.Forms.ToolStripMenuItem();
+            this.tsAltDeinterleave = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.tsReverse = new System.Windows.Forms.ToolStripMenuItem();
             this.tsReverseAll = new System.Windows.Forms.ToolStripMenuItem();
@@ -216,7 +220,8 @@ namespace NAPS2.WinForms
             // tsScan
             // 
             this.tsScan.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.tsNewProfile});
+            this.tsNewProfile,
+            this.tsBatchScan});
             this.tsScan.Image = global::NAPS2.Icons.control_play_blue;
             resources.ApplyResources(this.tsScan, "tsScan");
             this.tsScan.Margin = new System.Windows.Forms.Padding(5, 1, 5, 2);
@@ -230,6 +235,13 @@ namespace NAPS2.WinForms
             resources.ApplyResources(this.tsNewProfile, "tsNewProfile");
             this.tsNewProfile.Name = "tsNewProfile";
             this.tsNewProfile.Click += new System.EventHandler(this.tsNewProfile_Click);
+            // 
+            // tsBatchScan
+            // 
+            this.tsBatchScan.Image = global::NAPS2.Icons.application_cascade;
+            resources.ApplyResources(this.tsBatchScan, "tsBatchScan");
+            this.tsBatchScan.Name = "tsBatchScan";
+            this.tsBatchScan.Click += new System.EventHandler(this.tsBatchScan_Click);
             // 
             // tsProfiles
             // 
@@ -503,6 +515,9 @@ namespace NAPS2.WinForms
             this.tsdReorder.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsInterleave,
             this.tsDeinterleave,
+            this.toolStripSeparator12,
+            this.tsAltInterleave,
+            this.tsAltDeinterleave,
             this.toolStripSeparator1,
             this.tsReverse});
             this.tsdReorder.Image = global::NAPS2.Icons.arrow_refresh;
@@ -522,6 +537,23 @@ namespace NAPS2.WinForms
             this.tsDeinterleave.Name = "tsDeinterleave";
             resources.ApplyResources(this.tsDeinterleave, "tsDeinterleave");
             this.tsDeinterleave.Click += new System.EventHandler(this.tsDeinterleave_Click);
+            // 
+            // toolStripSeparator12
+            // 
+            this.toolStripSeparator12.Name = "toolStripSeparator12";
+            resources.ApplyResources(this.toolStripSeparator12, "toolStripSeparator12");
+            // 
+            // tsAltInterleave
+            // 
+            this.tsAltInterleave.Name = "tsAltInterleave";
+            resources.ApplyResources(this.tsAltInterleave, "tsAltInterleave");
+            this.tsAltInterleave.Click += new System.EventHandler(this.tsAltInterleave_Click);
+            // 
+            // tsAltDeinterleave
+            // 
+            this.tsAltDeinterleave.Name = "tsAltDeinterleave";
+            resources.ApplyResources(this.tsAltDeinterleave, "tsAltDeinterleave");
+            this.tsAltDeinterleave.Click += new System.EventHandler(this.tsAltDeinterleave_Click);
             // 
             // toolStripSeparator1
             // 
@@ -671,6 +703,10 @@ namespace NAPS2.WinForms
         private System.Windows.Forms.Button btnZoomOut;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator11;
         private System.Windows.Forms.ToolStripMenuItem tsImageSettings;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator12;
+        private System.Windows.Forms.ToolStripMenuItem tsAltInterleave;
+        private System.Windows.Forms.ToolStripMenuItem tsAltDeinterleave;
+        private System.Windows.Forms.ToolStripMenuItem tsBatchScan;
     }
 }
 

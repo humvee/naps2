@@ -33,10 +33,16 @@ namespace NAPS2.Scan
     public interface IScanDriver
     {
         /// <summary>
-        /// Sets the settings used by the driver for scanning.
+        /// Sets the profile used by the driver for scanning.
         /// This must be set before calling Scan.
         /// </summary>
-        ExtendedScanSettings ScanSettings { set; }
+        ScanProfile ScanProfile { set; }
+
+        /// <summary>
+        /// Sets the runtime parameters used by the driver for scanning.
+        /// This must be set before calling Scan.
+        /// </summary>
+        ScanParams ScanParams { set; }
 
         /// <summary>
         /// Sets the device used by the driver for scanning.
@@ -67,7 +73,7 @@ namespace NAPS2.Scan
         /// </summary>
         /// <returns>A list of scanned images.</returns>
         /// <exception cref="ScanDriverException">Throws a ScanDriverException if an error occurs while scanning.</exception>
-        /// /// <exception cref="InvalidOperationException">Throws an InvalidOperationException if ScanSettings or DialogParent has not been set.</exception>
+        /// /// <exception cref="InvalidOperationException">Throws an InvalidOperationException if ScanProfile or DialogParent has not been set.</exception>
         IEnumerable<IScannedImage> Scan();
     }
 }

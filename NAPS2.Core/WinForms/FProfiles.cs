@@ -25,6 +25,7 @@ using System.Windows.Forms;
 using NAPS2.Config;
 using NAPS2.Lang.Resources;
 using NAPS2.Scan;
+using NAPS2.Scan.Images;
 using NAPS2.Util;
 
 namespace NAPS2.WinForms
@@ -37,19 +38,21 @@ namespace NAPS2.WinForms
         private readonly AppConfigManager appConfigManager;
         private readonly IconButtonSizer iconButtonSizer;
         private readonly IScanPerformer scanPerformer;
+        private readonly ProfileNameTracker profileNameTracker;
 
-        public FProfiles(IProfileManager profileManager, AppConfigManager appConfigManager, IconButtonSizer iconButtonSizer, IScanPerformer scanPerformer)
+        public FProfiles(IProfileManager profileManager, AppConfigManager appConfigManager, IconButtonSizer iconButtonSizer, IScanPerformer scanPerformer, ProfileNameTracker profileNameTracker)
         {
             this.profileManager = profileManager;
             this.appConfigManager = appConfigManager;
             this.iconButtonSizer = iconButtonSizer;
             this.scanPerformer = scanPerformer;
+            this.profileNameTracker = profileNameTracker;
             InitializeComponent();
         }
 
-        public IScanReceiver ScanReceiver { get; set; }
+        public Action<IScannedImage> ImageCallback { get; set; }
 
-        private ExtendedScanSettings SelectedProfile
+        private ScanProfile SelectedProfile
         {
             get
             {
@@ -100,7 +103,7 @@ namespace NAPS2.WinForms
             }
         }
 
-        private void SelectProfile(Func<ExtendedScanSettings, bool> pred)
+        private void SelectProfile(Func<ScanProfile, bool> pred)
         {
             int i = 0;
             foreach (var profile in profileManager.Profiles)
@@ -120,13 +123,13 @@ namespace NAPS2.WinForms
         private void btnAdd_Click(object sender, EventArgs e)
         {
             var fedit = FormFactory.Create<FEditScanSettings>();
-            fedit.ScanSettings = appConfigManager.Config.DefaultProfileSettings ?? new ExtendedScanSettings { Version = ExtendedScanSettings.CURRENT_VERSION };
+            fedit.ScanProfile = appConfigManager.Config.DefaultProfileSettings ?? new ScanProfile { Version = ScanProfile.CURRENT_VERSION };
             fedit.ShowDialog();
             if (fedit.Result)
             {
-                profileManager.Profiles.Add(fedit.ScanSettings);
+                profileManager.Profiles.Add(fedit.ScanProfile);
                 UpdateProfiles();
-                SelectProfile(x => x == fedit.ScanSettings);
+                SelectProfile(x => x == fedit.ScanProfile);
                 profileManager.Save();
             }
         }
@@ -137,14 +140,14 @@ namespace NAPS2.WinForms
             {
                 int profileIndex = lvProfiles.SelectedItems[0].Index;
                 var fedit = FormFactory.Create<FEditScanSettings>();
-                fedit.ScanSettings = profileManager.Profiles[profileIndex];
+                fedit.ScanProfile = profileManager.Profiles[profileIndex];
                 fedit.ShowDialog();
                 if (fedit.Result)
                 {
-                    profileManager.Profiles[profileIndex] = fedit.ScanSettings;
+                    profileManager.Profiles[profileIndex] = fedit.ScanProfile;
                     profileManager.Save();
                     UpdateProfiles();
-                    SelectProfile(x => x == fedit.ScanSettings);
+                    SelectProfile(x => x == fedit.ScanProfile);
                     lvProfiles.SelectedIndices.Add(profileIndex);
                 }
                 else
@@ -170,6 +173,10 @@ namespace NAPS2.WinForms
                     : string.Format(MiscResources.ConfirmDeleteMultipleProfiles, lvProfiles.SelectedIndices.Count);
                 if (MessageBox.Show(message, MiscResources.Delete, MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes)
                 {
+                    foreach (var profile in profileManager.Profiles.ElementsAt(lvProfiles.SelectedIndices.OfType<int>()))
+                    {
+                        profileNameTracker.DeletingProfile(profile.DisplayName);
+                    }
                     profileManager.Profiles.RemoveAll(lvProfiles.SelectedIndices.OfType<int>());
                     profileManager.Save();
                     UpdateProfiles();
@@ -209,16 +216,16 @@ namespace NAPS2.WinForms
             if (profileManager.Profiles.Count == 0)
             {
                 var editSettingsForm = FormFactory.Create<FEditScanSettings>();
-                editSettingsForm.ScanSettings = new ExtendedScanSettings
+                editSettingsForm.ScanProfile = new ScanProfile
                 {
-                    Version = ExtendedScanSettings.CURRENT_VERSION
+                    Version = ScanProfile.CURRENT_VERSION
                 };
                 editSettingsForm.ShowDialog();
                 if (!editSettingsForm.Result)
                 {
                     return;
                 }
-                profileManager.Profiles.Add(editSettingsForm.ScanSettings);
+                profileManager.Profiles.Add(editSettingsForm.ScanProfile);
                 profileManager.Save();
                 UpdateProfiles();
                 lvProfiles.SelectedIndices.Add(0);
@@ -230,7 +237,7 @@ namespace NAPS2.WinForms
                 return;
             }
             profileManager.Save();
-            scanPerformer.PerformScan(SelectedProfile, this, ScanReceiver);
+            scanPerformer.PerformScan(SelectedProfile, new ScanParams(), this, ImageCallback);
             Activate();
         }
 

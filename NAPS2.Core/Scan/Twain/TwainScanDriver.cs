@@ -98,9 +98,9 @@ namespace NAPS2.Scan.Twain
                 using (var output = Image.FromStream(eventArgs.GetNativeImageStream()))
                 {
                     double scaleFactor = 1;
-                    if (!ScanSettings.UseNativeUI)
+                    if (!ScanProfile.UseNativeUI)
                     {
-                        scaleFactor = ScanSettings.AfterScanScale.ToIntScaleFactor();
+                        scaleFactor = ScanProfile.AfterScanScale.ToIntScaleFactor();
                     }
 
                     using (var result = ImageScaleHelper.ScaleImage(output, scaleFactor))
@@ -108,7 +108,18 @@ namespace NAPS2.Scan.Twain
                         var bitDepth = output.PixelFormat == PixelFormat.Format1bppIndexed
                             ? ScanBitDepth.BlackWhite
                             : ScanBitDepth.C24Bit;
-                        images.Add(scannedImageFactory.Create(result, bitDepth, ScanSettings.MaxQuality));
+                        var img = scannedImageFactory.Create(result, bitDepth, ScanProfile.MaxQuality);
+                        if (ScanParams.DetectPatchCodes)
+                        {
+                            foreach (var patchCodeInfo in eventArgs.GetExtImageInfo(ExtendedImageInfo.PatchCode))
+                            {
+                                if (patchCodeInfo.ReturnCode == ReturnCode.Success)
+                                {
+                                    img.PatchCode = GetPatchCode(patchCodeInfo);
+                                }
+                            }
+                        }
+                        images.Add(img);
                     }
                 }
             };
@@ -142,7 +153,7 @@ namespace NAPS2.Scan.Twain
                         return;
                     }
                     ConfigureDS(ds);
-                    var ui = ScanSettings.UseNativeUI ? SourceEnableMode.ShowUI : SourceEnableMode.NoUI;
+                    var ui = ScanProfile.UseNativeUI ? SourceEnableMode.ShowUI : SourceEnableMode.NoUI;
                     rc = ds.Enable(ui, true, twainForm.Handle);
                     if (rc != ReturnCode.Success)
                     {
@@ -179,15 +190,36 @@ namespace NAPS2.Scan.Twain
             return images;
         }
 
+        private static PatchCode GetPatchCode(TWInfo patchCodeInfo)
+        {
+            switch ((NTwain.Data.PatchCode)patchCodeInfo.Item)
+            {
+                case NTwain.Data.PatchCode.Patch1:
+                    return PatchCode.Patch1;
+                case NTwain.Data.PatchCode.Patch2:
+                    return PatchCode.Patch2;
+                case NTwain.Data.PatchCode.Patch3:
+                    return PatchCode.Patch3;
+                case NTwain.Data.PatchCode.Patch4:
+                    return PatchCode.Patch4;
+                case NTwain.Data.PatchCode.Patch6:
+                    return PatchCode.Patch6;
+                case NTwain.Data.PatchCode.PatchT:
+                    return PatchCode.PatchT;
+                default:
+                    throw new ArgumentException();
+            }
+        }
+
         private void ConfigureDS(DataSource ds)
         {
-            if (ScanSettings.UseNativeUI)
+            if (ScanProfile.UseNativeUI)
             {
                 return;
             }
 
             // Paper Source
-            switch (ScanSettings.PaperSource)
+            switch (ScanProfile.PaperSource)
             {
                 case ScanSource.Glass:
                     ds.Capabilities.CapFeederEnabled.SetValue(BoolType.False);
@@ -204,7 +236,7 @@ namespace NAPS2.Scan.Twain
             }
 
             // Bit Depth
-            switch (ScanSettings.BitDepth)
+            switch (ScanProfile.BitDepth)
             {
                 case ScanBitDepth.C24Bit:
                     ds.Capabilities.ICapPixelType.SetValue(PixelType.RGB);
@@ -218,7 +250,7 @@ namespace NAPS2.Scan.Twain
             }
 
             // Page Size, Horizontal Align
-            PageDimensions pageDimensions = ScanSettings.PageSize.PageDimensions() ?? ScanSettings.CustomPageSize;
+            PageDimensions pageDimensions = ScanProfile.PageSize.PageDimensions() ?? ScanProfile.CustomPageSize;
             if (pageDimensions == null)
             {
                 throw new InvalidOperationException("No page size specified");
@@ -229,9 +261,9 @@ namespace NAPS2.Scan.Twain
             float pageMaxWidth = pageMaxWidthFixed.Whole + (pageMaxWidthFixed.Fraction / (float)ushort.MaxValue);
 
             float horizontalOffset = 0.0f;
-            if (ScanSettings.PageAlign == ScanHorizontalAlign.Center)
+            if (ScanProfile.PageAlign == ScanHorizontalAlign.Center)
                 horizontalOffset = (pageMaxWidth - pageWidth) / 2;
-            else if (ScanSettings.PageAlign == ScanHorizontalAlign.Left)
+            else if (ScanProfile.PageAlign == ScanHorizontalAlign.Left)
                 horizontalOffset = (pageMaxWidth - pageWidth);
 
             ds.Capabilities.ICapUnits.SetValue(Unit.Inches);
@@ -248,13 +280,19 @@ namespace NAPS2.Scan.Twain
 
             // Brightness, Contrast
             // Conveniently, the range of values used in settings (-1000 to +1000) is the same range TWAIN supports
-            ds.Capabilities.ICapBrightness.SetValue(ScanSettings.Brightness);
-            ds.Capabilities.ICapContrast.SetValue(ScanSettings.Contrast);
+            ds.Capabilities.ICapBrightness.SetValue(ScanProfile.Brightness);
+            ds.Capabilities.ICapContrast.SetValue(ScanProfile.Contrast);
 
             // Resolution
-            int dpi = ScanSettings.Resolution.ToIntDpi();
+            int dpi = ScanProfile.Resolution.ToIntDpi();
             ds.Capabilities.ICapXResolution.SetValue(dpi);
             ds.Capabilities.ICapYResolution.SetValue(dpi);
+
+            // Patch codes
+            if (ScanParams.DetectPatchCodes)
+            {
+                ds.Capabilities.ICapPatchCodeDetectionEnabled.SetValue(BoolType.True);
+            }
         }
     }
 }

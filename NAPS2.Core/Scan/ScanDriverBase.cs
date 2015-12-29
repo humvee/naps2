@@ -31,7 +31,9 @@ namespace NAPS2.Scan
     {
         public abstract string DriverName { get; }
 
-        public ExtendedScanSettings ScanSettings { get; set; }
+        public ScanProfile ScanProfile { get; set; }
+
+        public ScanParams ScanParams { get; set; }
 
         public ScanDevice ScanDevice { get; set; }
 
@@ -61,9 +63,13 @@ namespace NAPS2.Scan
 
         public IEnumerable<IScannedImage> Scan()
         {
-            if (ScanSettings == null)
+            if (ScanProfile == null)
             {
-                throw new InvalidOperationException("IScanDriver.ScanSettings must be specified before calling Scan().");
+                throw new InvalidOperationException("IScanDriver.ScanProfile must be specified before calling Scan().");
+            }
+            if (ScanParams == null)
+            {
+                throw new InvalidOperationException("IScanDriver.ScanParams must be specified before calling Scan().");
             }
             if (ScanDevice == null)
             {

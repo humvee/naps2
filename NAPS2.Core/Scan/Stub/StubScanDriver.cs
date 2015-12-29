@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using NAPS2.Scan.Images;
 
@@ -30,6 +31,7 @@ namespace NAPS2.Scan.Stub
     public class StubScanDriver : IScanDriver
     {
         private readonly IScannedImageFactory scannedImageFactory;
+        private static int _number = 1;
 
         public StubScanDriver(string driverName, IScannedImageFactory scannedImageFactory)
         {
@@ -37,7 +39,9 @@ namespace NAPS2.Scan.Stub
             this.scannedImageFactory = scannedImageFactory;
         }
 
-        public ExtendedScanSettings ScanSettings { get; set; }
+        public ScanProfile ScanProfile { get; set; }
+
+        public ScanParams ScanParams { get; set; }
 
         public ScanDevice ScanDevice { get; set; }
 
@@ -50,7 +54,28 @@ namespace NAPS2.Scan.Stub
 
         public IEnumerable<IScannedImage> Scan()
         {
-            yield return MakeImage();
+            for (int i = 0; i < ImageCount; i++)
+            {
+                Thread.Sleep(500);
+                yield return MakeImage();
+            }
+        }
+
+        private int ImageCount
+        {
+            get
+            {
+                switch (ScanProfile.PaperSource)
+                {
+                    case ScanSource.Glass:
+                        return 1;
+                    case ScanSource.Feeder:
+                        return 3;
+                    case ScanSource.Duplex:
+                        return 4;
+                }
+                return 0;
+            }
         }
 
         private IScannedImage MakeImage()
@@ -59,9 +84,9 @@ namespace NAPS2.Scan.Stub
             using (Graphics g = Graphics.FromImage(bitmap))
             {
                 g.FillRectangle(Brushes.LightGray, 0, 0, bitmap.Width, bitmap.Height);
-                g.DrawString(new Random().Next().ToString("G"), new Font("Times New Roman", 80), Brushes.Black, 0, 350);
+                g.DrawString((_number++).ToString("G"), new Font("Times New Roman", 80), Brushes.Black, 0, 350);
             }
-            var image = scannedImageFactory.Create(bitmap, ScanBitDepth.C24Bit, ScanSettings.MaxQuality);
+            var image = scannedImageFactory.Create(bitmap, ScanBitDepth.C24Bit, ScanProfile.MaxQuality);
             return image;
         }
 

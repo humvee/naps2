@@ -23,6 +23,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Text;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -46,7 +47,7 @@ using NAPS2.Util;
 
 namespace NAPS2.WinForms
 {
-    public partial class FDesktop : FormBase, IScanReceiver, IAutoUpdaterClient
+    public partial class FDesktop : FormBase, IAutoUpdaterClient
     {
         private readonly IEmailer emailer;
         private readonly IScannedImageImporter scannedImageImporter;
@@ -231,6 +232,7 @@ namespace NAPS2.WinForms
             imageList.Images.Add(scannedImage);
             AppendThumbnail(scannedImage);
             changeTracker.HasUnsavedChanges = true;
+            Application.DoEvents();
         }
 
         private void UpdateThumbnails()
@@ -456,8 +458,10 @@ namespace NAPS2.WinForms
 
         private void UpdateScanButton()
         {
+            const int staticButtonCount = 2;
+
             // Clean up the dropdown
-            while (tsScan.DropDownItems.Count > 1)
+            while (tsScan.DropDownItems.Count > staticButtonCount)
             {
                 tsScan.DropDownItems.RemoveAt(0);
             }
@@ -479,15 +483,15 @@ namespace NAPS2.WinForms
 
                     UpdateScanButton();
 
-                    scanPerformer.PerformScan(profile, this, this);
+                    scanPerformer.PerformScan(profile, new ScanParams(), this, ReceiveScannedImage);
                     Activate();
                 };
-                tsScan.DropDownItems.Insert(tsScan.DropDownItems.Count - 1, item);
+                tsScan.DropDownItems.Insert(tsScan.DropDownItems.Count - staticButtonCount, item);
             }
 
             if (profileManager.Profiles.Any())
             {
-                tsScan.DropDownItems.Insert(tsScan.DropDownItems.Count - 1, new ToolStripSeparator());
+                tsScan.DropDownItems.Insert(tsScan.DropDownItems.Count - staticButtonCount, new ToolStripSeparator());
             }
         }
 
@@ -500,7 +504,7 @@ namespace NAPS2.WinForms
         {
             if (profileManager.DefaultProfile != null)
             {
-                scanPerformer.PerformScan(profileManager.DefaultProfile, this, this);
+                scanPerformer.PerformScan(profileManager.DefaultProfile, new ScanParams(), this, ReceiveScannedImage);
                 Activate();
             }
             else
@@ -517,19 +521,19 @@ namespace NAPS2.WinForms
         private void ScanWithNewProfile()
         {
             var editSettingsForm = FormFactory.Create<FEditScanSettings>();
-            editSettingsForm.ScanSettings = new ExtendedScanSettings { Version = ExtendedScanSettings.CURRENT_VERSION };
+            editSettingsForm.ScanProfile = appConfigManager.Config.DefaultProfileSettings ?? new ScanProfile { Version = ScanProfile.CURRENT_VERSION };
             editSettingsForm.ShowDialog();
             if (!editSettingsForm.Result)
             {
                 return;
             }
-            profileManager.Profiles.Add(editSettingsForm.ScanSettings);
-            profileManager.DefaultProfile = editSettingsForm.ScanSettings;
+            profileManager.Profiles.Add(editSettingsForm.ScanProfile);
+            profileManager.DefaultProfile = editSettingsForm.ScanProfile;
             profileManager.Save();
 
             UpdateScanButton();
 
-            scanPerformer.PerformScan(editSettingsForm.ScanSettings, this, this);
+            scanPerformer.PerformScan(editSettingsForm.ScanProfile, new ScanParams(), this, ReceiveScannedImage);
             Activate();
         }
 
@@ -731,7 +735,7 @@ namespace NAPS2.WinForms
         private void ShowProfilesForm()
         {
             var form = FormFactory.Create<FProfiles>();
-            form.ScanReceiver = this;
+            form.ImageCallback = ReceiveScannedImage;
             form.ShowDialog();
             UpdateScanButton();
         }
@@ -877,6 +881,26 @@ namespace NAPS2.WinForms
             changeTracker.HasUnsavedChanges = true;
         }
 
+        private void tsAltInterleave_Click(object sender, EventArgs e)
+        {
+            if (imageList.Images.Count < 3)
+            {
+                return;
+            }
+            UpdateThumbnails(imageList.AltInterleave(SelectedIndices));
+            changeTracker.HasUnsavedChanges = true;
+        }
+
+        private void tsAltDeinterleave_Click(object sender, EventArgs e)
+        {
+            if (imageList.Images.Count < 3)
+            {
+                return;
+            }
+            UpdateThumbnails(imageList.AltDeinterleave(SelectedIndices));
+            changeTracker.HasUnsavedChanges = true;
+        }
+
         private void thumbnailList1_MouseMove(object sender, MouseEventArgs e)
         {
             Cursor = thumbnailList1.GetItemAt(e.X, e.Y) == null ? Cursors.Default : Cursors.Hand;
@@ -1011,6 +1035,7 @@ namespace NAPS2.WinForms
             {
                 var form = FormFactory.Create<FCrop>();
                 form.Image = SelectedImages.First();
+                form.SelectedImages = SelectedImages.ToList();
                 form.ShowDialog();
                 UpdateThumbnails(SelectedIndices.ToList());
             }
@@ -1022,6 +1047,7 @@ namespace NAPS2.WinForms
             {
                 var form = FormFactory.Create<FBrightness>();
                 form.Image = SelectedImages.First();
+                form.SelectedImages = SelectedImages.ToList();
                 form.ShowDialog();
                 UpdateThumbnails(SelectedIndices.ToList());
             }
@@ -1033,6 +1059,7 @@ namespace NAPS2.WinForms
             {
                 var form = FormFactory.Create<FContrast>();
                 form.Image = SelectedImages.First();
+                form.SelectedImages = SelectedImages.ToList();
                 form.ShowDialog();
                 UpdateThumbnails(SelectedIndices.ToList());
             }
@@ -1044,6 +1071,7 @@ namespace NAPS2.WinForms
             {
                 var form = FormFactory.Create<FRotate>();
                 form.Image = SelectedImages.First();
+                form.SelectedImages = SelectedImages.ToList();
                 form.ShowDialog();
                 UpdateThumbnails(SelectedIndices.ToList());
             }
@@ -1199,6 +1227,14 @@ namespace NAPS2.WinForms
         private void btnZoomIn_Click(object sender, EventArgs e)
         {
             StepThumbnailSize(1);
+        }
+
+        private void tsBatchScan_Click(object sender, EventArgs e)
+        {
+            var form = FormFactory.Create<FBatchScan>();
+            form.ImageCallback = ReceiveScannedImage;
+            form.ShowDialog();
+            UpdateScanButton();
         }
     }
 }

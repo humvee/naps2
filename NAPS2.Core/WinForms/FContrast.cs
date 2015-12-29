@@ -49,10 +49,29 @@ namespace NAPS2.WinForms
 
         public IScannedImage Image { get; set; }
 
+        public List<IScannedImage> SelectedImages { get; set; }
+
         public ContrastTransform ContrastTransform { get; private set; }
+
+        private IEnumerable<IScannedImage> ImagesToTransform
+        {
+            get
+            {
+                return SelectedImages != null && checkboxApplyToSelected.Checked ? SelectedImages : Enumerable.Repeat(Image, 1);
+            }
+        }
 
         protected override void OnLoad(object sender, EventArgs eventArgs)
         {
+            if (SelectedImages != null && SelectedImages.Count > 1)
+            {
+                checkboxApplyToSelected.Text = string.Format(checkboxApplyToSelected.Text, SelectedImages.Count);
+            }
+            else
+            {
+                ConditionalControls.Hide(checkboxApplyToSelected, 6);
+            }
+
             new LayoutManager(this)
                 .Bind(tbContrast, pictureBox)
                     .WidthToForm()
@@ -60,7 +79,7 @@ namespace NAPS2.WinForms
                     .HeightToForm()
                 .Bind(btnOK, btnCancel, txtContrast)
                     .RightToForm()
-                .Bind(tbContrast, txtContrast, btnRevert, btnOK, btnCancel)
+                .Bind(tbContrast, txtContrast, checkboxApplyToSelected, btnRevert, btnOK, btnCancel)
                     .BottomToForm()
                 .Activate();
             Size = new Size(600, 600);
@@ -111,8 +130,11 @@ namespace NAPS2.WinForms
         {
             if (!ContrastTransform.IsNull)
             {
-                Image.AddTransform(ContrastTransform);
-                Image.SetThumbnail(Image.RenderThumbnail(UserConfigManager.Config.ThumbnailSize));
+                foreach (var img in ImagesToTransform)
+                {
+                    img.AddTransform(ContrastTransform);
+                    img.SetThumbnail(img.RenderThumbnail(UserConfigManager.Config.ThumbnailSize));
+                }
                 changeTracker.HasUnsavedChanges = true;
             }
             Close();
